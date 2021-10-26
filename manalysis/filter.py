@@ -1,10 +1,12 @@
 import numpy as np
-from scipy import signal
+from scipy import signal, fftpack
 
 
 __all__ = ['butter_highpass',
            'butter_highpass_filter',
+           'hp_filter_vibrations',
            'flattop_window',
+           'fft',
           ]
 
 
@@ -34,6 +36,39 @@ def butter_highpass_filter(data, cutoff, fs, order=5):
     y = signal.filtfilt(b, a, data)
     return y
 
+    
+def hp_filter_vibrations(x, y, fc_factor=8):
+    """Highpass filter vibration data
+
+    Parameters
+    ----------
+    x : 1D numpy array
+        Time [s]
+    y : 1D numpy array
+        Vibration amplitude [nm]
+    fc_factor : float or int
+        Multiplication factor for high pass filter
+        critical frequency. 
+
+    Returns
+    -------
+    y : 1D numpy array of length data.shape[0]
+        Filtered vibration amplitude [nm]
+
+    """
+    # Number of samplepoints
+    N = len(y)
+    # Sampling time
+    T = x[1]-x[0]
+    # Sampling frequency
+    fs = 1/T
+    # Frame time
+    T_f = N*T
+    # High pass critical frequency
+    f_c = fc_factor * 1 / T_f
+    # Filter data and return
+    return butter_highpass_filter(y, f_c, fs)
+
 
 def flattop_window(spectra):
     """Reducing FFT Scalloping Loss Errors Without Multiplication
@@ -52,3 +87,11 @@ def flattop_window(spectra):
                               g_coeffs[1]*spectra[(i+1) % k] + \
                               g_coeffs[2]*spectra[(i+2) % k]
     return windowed_spectra
+    
+    
+def fft(y, T):
+    N = len(y)
+    yf = fftpack.fft(y)
+    xf = np.linspace(0.0, 1.0/(2.0*T), N//2)
+    yf = 4.0/N * np.abs(flattop_window(yf)[:N//2])
+    return xf, yf
