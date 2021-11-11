@@ -1,13 +1,19 @@
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
 import logging
+import scipy
 
 from .math import fast_corr
-from .util import get_TFS_metadata
-from .filter import hp_filter_vibrations
+from .util import get_TFS_metadata, longest_cont_segment
+from .filter import hp_filter_vibrations, scalloping_loss_corrected_fft
+from .io import get_images
 
 __all__ = ['generate_heavisides',
            'extract_shifts',
            'extract_vibrations',
+           'batch_extract',
           ]
 
 
@@ -80,12 +86,18 @@ def extract_vibrations(data, file_path=None, pixel_width=None,
         # Try extracting TFS metadata
         try:
             logging.info("Trying to get TFS metadata.")
-            meta = get_TFS_metadata(file_path, ["PixelWidth", "LineTime"])
+            meta = get_TFS_metadata(file_path, ["PixelWidth", "LineTime", "ScanRotation"])
         except: 
             logging.info("Failed to get TFS metadata.")
         else: 
             pixel_width = meta["PixelWidth"]
             line_time = meta["LineTime"]
+            if meta["ScanRotation"] == 0.0:
+                direction = 'x'
+            elif 1.555 < meta["ScanRotation"] < 1.586:
+                direction = 'y'
+            else:
+                logging.info("Scan rotation unknown")
         # Try others?
 
     # Extract shifts
@@ -96,4 +108,76 @@ def extract_vibrations(data, file_path=None, pixel_width=None,
     N = len(y)
     # Time series in [s]
     x = np.linspace(0.0, N*line_time, N) 
-    return x, y
+    return direction, x, y
+
+    
+def batch_extract(dir_path, load_new=False, image_fraction=0.33,
+                  smooth=0):
+    """Extract and convert shifts to physical quantities, 
+    i.e. shifts in [nm] versus time for whole directory 
+    of images.
+
+    Parameters
+    ----------
+    dir_path : path or str
+        Path of the directory to process
+
+    Returns
+    -------
+    df : pandas.DataFrame
+        DataFrame containing processed data from images
+        inside directory.
+
+    """
+    names = ["Raw time [s]", "Raw displacement [nm]", 
+             "HPF(raw displacement) [nm]", "Time [s]", 
+             "Displacement [nm]", "Frequency [Hz]", 
+             "P2P amplitude [nm]"]
+    dfs, avgs = {}, {}
+    csv_location = Path(dir_path) / "Vibration_data.csv"
+    if csv_location.exists() and not load_new:
+        df = pd.read_csv(csv_location, header=[0,1,2])
+        return df
+    
+    imgs = get_images(dir_path)
+    for fp, img in imgs:
+        img = scipy.ndimage.gaussian_filter1d(img, smooth, 1)
+        direction, x, y = extract_vibrations(img, fp)
+        y_hpf = hp_filter_vibrations(x, y)
+
+        start, stop = longest_cont_segment(y_hpf)       
+        y_sel = y_hpf[start:stop]
+        x_sel = x[:stop-start]
+        if stop-start < image_fraction*len(y_hpf): 
+            continue
+
+        xf, yf = scalloping_loss_corrected_fft(y_sel, x_sel[1]-x_sel[0])
+        avgs.setdefault(direction, []).append(pd.Series(yf, index=xf))
+        data = [x, y, y_hpf, x_sel, y_sel, xf, yf]
+        d = {name:val for name, val in zip(names, data)}
+        dfs[(direction, fp)] = pd.DataFrame.from_dict(d, orient='index').transpose()
+
+    for key in avgs.keys():
+        avg = pd.concat(avgs[key], axis=1).interpolate('index').mean(axis=1)
+        median = pd.concat(avgs[key], axis=1).interpolate('index').median(axis=1)
+
+        
+        data = [avg.index.values, avg.values]
+        d = {name:val for name, val in zip(names[-2:], data)}
+        dfs[key, 'Average'] = pd.DataFrame.from_dict(d, orient='index').transpose()
+        
+        data = [median.index.values, median.values]
+        d = {name:val for name, val in zip(names[-2:], data)}
+        dfs[key, 'Median'] = pd.DataFrame.from_dict(d, orient='index').transpose()
+
+    df = pd.concat(dfs, axis=1, keys=dfs.keys())
+    df.to_csv(csv_location, index=False)
+    return df
+    
+    
+    
+
+
+
+    
+    

@@ -48,9 +48,9 @@ def get_images(file_pattern):
         if Path(file_pattern).is_dir():
             logging.info("Creating list from directory.")
             # Collect every png/tif/tiff image in directory
-            filepaths = list(Path(file_pattern).glob('*.png')) + \
-                        list(Path(file_pattern).glob('*.tif')) + \
-                        list(Path(file_pattern).glob('*.tiff'))
+            filepaths = list(Path(file_pattern).glob('**/*.png')) + \
+                        list(Path(file_pattern).glob('**/*.tif')) + \
+                        list(Path(file_pattern).glob('**/*.tiff'))
             # Sort filepaths
             filepaths = natural_sort([fp.as_posix() for fp in filepaths])
             # Load images

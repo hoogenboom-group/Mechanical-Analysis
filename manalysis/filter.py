@@ -6,7 +6,7 @@ __all__ = ['butter_highpass',
            'butter_highpass_filter',
            'hp_filter_vibrations',
            'flattop_window',
-           'fft',
+           'scalloping_loss_corrected_fft',
           ]
 
 
@@ -37,7 +37,7 @@ def butter_highpass_filter(data, cutoff, fs, order=5):
     return y
 
     
-def hp_filter_vibrations(x, y, fc_factor=8):
+def hp_filter_vibrations(x, y, fc_factor=5):
     """Highpass filter vibration data
 
     Parameters
@@ -89,7 +89,7 @@ def flattop_window(spectra):
     return windowed_spectra
     
     
-def fft(y, T):
+def scalloping_loss_corrected_fft(y, T):
     N = len(y)
     yf = fftpack.fft(y)
     xf = np.linspace(0.0, 1.0/(2.0*T), N//2)
