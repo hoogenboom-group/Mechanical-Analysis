@@ -1,10 +1,12 @@
 import numpy as np
+import time
 import re
 
 __all__ = ['longest_sequence',
            'longest_cont_segment',
            'get_percentile_limits',
            'natural_sort',
+           'chunkify',
            'is_notebook',
            'get_TFS_metadata',
           ]
@@ -111,6 +113,31 @@ def natural_sort(l):
     return sorted(l, key=alphanum_key)
 
 
+def chunkify(l, n, duplicate_edges=False):
+    """Divide list into (roughly) equal chunks,
+    possibly duplicating inner edges
+
+    Parameters
+    ----------
+    l : list
+        list to chunkify
+
+    Examples
+    --------
+
+
+    References
+    ----------
+    [1] Adapted from https://stackoverflow.com/a/2135920
+    """
+    k, m = divmod(len(l), n)
+    new_l = list(l[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n))
+    if duplicate_edges:
+        for j in range(1, len(new_l)):
+            new_l[j].insert(0, new_l[j-1][-1])
+    return new_l
+
+
 def is_notebook():
     """Attempts to determines whether code is being exectued in a notebook or not
     
@@ -175,3 +202,16 @@ def get_TFS_metadata(fn, keys):
         return list(metadata.values())[0]
     else:
         return metadata
+        
+
+class Timer(object):
+    def __init__(self, name=None):
+        self.name = name
+
+    def __enter__(self):
+        self.tstart = time.time()
+
+    def __exit__(self, type, value, traceback):
+        if self.name:
+            print('[%s]' % self.name,)
+        print('Elapsed: %s' % (time.time() - self.tstart))

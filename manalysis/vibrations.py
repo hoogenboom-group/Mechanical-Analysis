@@ -97,7 +97,7 @@ def extract_vibrations(data, file_path=None, pixel_width=None,
             elif 1.555 < meta["ScanRotation"] < 1.586:
                 direction = 'y'
             else:
-                logging.info("Scan rotation unknown")
+                raise TypeError("ScanRotation unknown.")
         # Try others?
 
     # Extract shifts

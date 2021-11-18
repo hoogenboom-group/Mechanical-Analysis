@@ -23,7 +23,7 @@ def format_vibr_freq_plot(ax, labelsize=12, ylim=(0.05,10),
                           xlim=(1,2e3), title=""):
     ax.set_xlabel("Frequency [Hz]", fontsize=labelsize)
     ax.set_ylabel("P2P amplitude [nm]", fontsize=labelsize)
-    ax.set_yscale('log')
+    ax.set_yscale('squareroot')
     ax.set_xscale('squareroot')
     ax.set_ylim(ylim)
     ax.set_xlim(xlim)
@@ -64,7 +64,8 @@ def format_ampl_hist_plot(ax, labelsize=12, ylim=(None, None),
 
 
 def vibration_plots(dfs, directions=('x', 'y'), dpi=150, save=False,
-                            plot_mean=True, plot_median=True):
+                            plot_mean=True, plot_median=True, ylim=None):
+    plt.style.use('seaborn-colorblind')
     if not type(dfs) == list: dfs = [dfs]
     for df in dfs:
         for d, direction in zip(['x', 'y'], directions):
@@ -81,7 +82,10 @@ def vibration_plots(dfs, directions=('x', 'y'), dpi=150, save=False,
                 if plot_median: axs[0].plot(df[d, 'Median', "Frequency [Hz]"], 
                                             df[d, 'Median', "P2P amplitude [nm]"], 
                                             '-b', lw=0.5, label="Median")
-                format_vibr_freq_plot(axs[0], title=direction)
+                if type(ylim) == tuple: 
+                    format_vibr_freq_plot(axs[0], title=direction, ylim=ylim)
+                else: 
+                    format_vibr_freq_plot(axs[0], title=direction)
                 
                 all_data = df[d].xs("Displacement [nm]", level=1, axis=1).values
                 all_data = all_data[~np.isnan(all_data)]
@@ -99,6 +103,46 @@ def vibration_plots(dfs, directions=('x', 'y'), dpi=150, save=False,
                     # avoid figure being picked up when loading data
                     fig.savefig(dir_name / (direction + ".jpg"))
                     plt.close('all')
+
+
+def vibration_plot_overview(dfs, directions=['x', 'y'], label=None):
+    plt.style.use('seaborn-colorblind')
+    if not type(dfs) == list: dfs = [dfs]
+    for d, direction in zip(['x', 'y'], directions):
+        if label == 'fromdir':
+            fig = plt.figure(figsize=(14,4), dpi=150)
+            axs = (plt.subplot2grid((1,7), (0,0), colspan=6), 
+                   plt.subplot2grid((1,7), (0,6)))
+        else:
+            fig, ax = plt.subplots(figsize=(14,4), dpi=150)
+            axs = [ax]
+        for df in dfs:
+            if d in list(df.columns.levels[0]): 
+                if label == None: use_label=""
+                elif label == 'fromdir':
+                    for use_label in list(df.columns.levels[1]):
+                        if "*.tif" in use_label: break
+                    use_label = Path(use_label).parents[0].parts[-1]
+                    cooler_T = float(use_label.split(" K")[0])
+                    all_data = df[d].xs("Displacement [nm]", level=1, axis=1).values
+                    all_data = all_data[~np.isnan(all_data)]
+                    n, bins = np.histogram(all_data, bins='auto')
+                    l1, l2 = get_percentile_limits(n, bins, 0.99)
+                    axs[1].plot(cooler_T, l2-l1, 'ok')
+                axs[0].plot(df[d, 'Average', "Frequency [Hz]"], 
+                         df[d, 'Average', "P2P amplitude [nm]"], 
+                         lw=1, label=use_label)
+        format_vibr_freq_plot(axs[0], title=direction)
+        axs[0].set_yscale('squareroot')
+        axs[0].set_ylim((0,5))
+        if label == 'fromdir':
+            axs[1].yaxis.set_label_position("right")
+            axs[1].yaxis.tick_right() 
+            axs[1].set_ylabel("Displacement [nm]")
+            axs[1].set_xlabel("Cooler temperature [K]")
+            axs[1].grid(b=True, which='both', ls="--")
+            axs[1].set_ylim(0, 30)
+
 
 
 def remove_duplicate_legend_labels(ax, alpha=0):
