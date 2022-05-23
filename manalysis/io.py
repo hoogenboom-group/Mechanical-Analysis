@@ -52,7 +52,7 @@ def get_images(file_pattern):
                         list(Path(file_pattern).glob('**/*.tif')) + \
                         list(Path(file_pattern).glob('**/*.tiff'))
             # Sort filepaths
-            filepaths = natural_sort([fp.as_posix() for fp in filepaths])
+            filepaths = sorted(filepaths, key=lambda x: (Path(x).stat().st_mtime))
             # Load images
             images = []
             for i, fp in enumerate(filepaths):

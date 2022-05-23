@@ -40,7 +40,7 @@ def extract_shift(im1, im2, upsample=10, method=phase_cross_correlation):
 def extract_drift(im1, im2, pixel_width=None, dt=None):
     # If user does not supply anything
     transpose = False
-    if not (pixel_width and dt):
+    if not pixel_width:
         fp1, im1 = im1
         fp2, im2 = im2
         # Try extracting TFS metadata
@@ -57,8 +57,9 @@ def extract_drift(im1, im2, pixel_width=None, dt=None):
                 transpose = True
             else:
                 raise TypeError("ScanRotation unknown.")
-        dt = Path(fp2).stat().st_mtime - Path(fp1).stat().st_mtime
         # Try others?
+    if not dt:
+        dt = Path(fp2).stat().st_mtime - Path(fp1).stat().st_mtime
 
     # Extract shifts
     shift = extract_shift(im1, im2)
@@ -105,6 +106,7 @@ def process_directory(dir_path, load_new=False):
             return df
         
         imgs = get_images(dir_path)
+        imgs = sorted(imgs, key=lambda x: (Path(x[0]).stat().st_mtime))
         df = batch_extract(imgs)
         df.to_csv(csv_location, index=False)
         return df

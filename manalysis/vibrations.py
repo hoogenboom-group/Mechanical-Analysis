@@ -54,7 +54,7 @@ def extract_shifts(data):
     
 
 def extract_vibrations(data, file_path=None, pixel_width=None, 
-                       line_time=None):
+                       line_time=None, direction=None):
     """Extract and convert shifts to physical quantities, 
     i.e. shifts in [nm] versus time.
 
@@ -141,17 +141,17 @@ def batch_extract(dir_path, load_new=False, image_fraction=0.33,
     
     imgs = get_images(dir_path)
     for fp, img in imgs:
-        img = scipy.ndimage.gaussian_filter1d(img, smooth, 1)
+        if not smooth == 0: img = scipy.ndimage.gaussian_filter1d(img, smooth, 1)
         direction, x, y = extract_vibrations(img, fp)
-        y_hpf = hp_filter_vibrations(x, y)
 
-        start, stop = longest_cont_segment(y_hpf)       
-        y_sel = y_hpf[start:stop]
+        start, stop = longest_cont_segment(y)       
+        y_sel = y[start:stop]
         x_sel = x[:stop-start]
-        if stop-start < image_fraction*len(y_hpf): 
+        if stop-start < image_fraction*len(y): 
             continue
 
-        xf, yf = scalloping_loss_corrected_fft(y_sel, x_sel[1]-x_sel[0])
+        y_hpf = hp_filter_vibrations(x_sel, y_sel)
+        xf, yf = scalloping_loss_corrected_fft(y_hpf, x_sel[1]-x_sel[0])
         avgs.setdefault(direction, []).append(pd.Series(yf, index=xf))
         data = [x, y, y_hpf, x_sel, y_sel, xf, yf]
         d = {name:val for name, val in zip(names, data)}
@@ -160,7 +160,6 @@ def batch_extract(dir_path, load_new=False, image_fraction=0.33,
     for key in avgs.keys():
         avg = pd.concat(avgs[key], axis=1).interpolate('index').mean(axis=1)
         median = pd.concat(avgs[key], axis=1).interpolate('index').median(axis=1)
-
         
         data = [avg.index.values, avg.values]
         d = {name:val for name, val in zip(names[-2:], data)}

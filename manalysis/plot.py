@@ -129,8 +129,8 @@ def vibration_plot_overview(dfs, directions=['x', 'y'], label=None):
                     n, bins = np.histogram(all_data, bins='auto')
                     l1, l2 = get_percentile_limits(n, bins, 0.99)
                     axs[1].plot(cooler_T, l2-l1, 'ok')
-                axs[0].plot(df[d, 'Average', "Frequency [Hz]"], 
-                         df[d, 'Average', "P2P amplitude [nm]"], 
+                axs[0].plot(df[d, 'Median', "Frequency [Hz]"], 
+                         df[d, 'Median', "P2P amplitude [nm]"], 
                          lw=1, label=use_label)
         format_vibr_freq_plot(axs[0], title=direction)
         axs[0].set_yscale('squareroot')
