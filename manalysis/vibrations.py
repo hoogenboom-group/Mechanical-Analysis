@@ -130,7 +130,7 @@ def batch_extract(dir_path, load_new=False, image_fraction=0.33,
 
     """
     names = ["Raw time [s]", "Raw displacement [nm]", 
-             "HPF(raw displacement) [nm]", "Time [s]", 
+             "Selected time [s]", "Selected displacement [nm]", 
              "Displacement [nm]", "Frequency [Hz]", 
              "P2P amplitude [nm]"]
     dfs, avgs = {}, {}
@@ -152,14 +152,16 @@ def batch_extract(dir_path, load_new=False, image_fraction=0.33,
 
         y_hpf = hp_filter_vibrations(x_sel, y_sel)
         xf, yf = scalloping_loss_corrected_fft(y_hpf, x_sel[1]-x_sel[0])
+        
         avgs.setdefault(direction, []).append(pd.Series(yf, index=xf))
-        data = [x, y, y_hpf, x_sel, y_sel, xf, yf]
+        data = [x, y, x_sel, y_sel, y_hpf, xf, yf]
         d = {name:val for name, val in zip(names, data)}
         dfs[(direction, fp)] = pd.DataFrame.from_dict(d, orient='index').transpose()
 
     for key in avgs.keys():
-        avg = pd.concat(avgs[key], axis=1).interpolate('index').mean(axis=1)
-        median = pd.concat(avgs[key], axis=1).interpolate('index').median(axis=1)
+        df_inter = pd.concat(avgs[key], axis=1).interpolate('index', limit_area='inside')
+        avg = df_inter.mean(axis=1)
+        median = df_inter.median(axis=1)
         
         data = [avg.index.values, avg.values]
         d = {name:val for name, val in zip(names[-2:], data)}
