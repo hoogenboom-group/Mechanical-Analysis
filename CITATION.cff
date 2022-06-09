@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+title: Mechanical-Analysis
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Daan Benjamin
+    family-names: Boltje
+    email: d.b.boltje@tudelft.nl
+    affiliation: Delft University of Technology
+    orcid: 'https://orcid.org/0000-0003-4881-4700'
+  - given-names: Mart F. G.
+    family-names: Last
+    email: m.g.f.last@lumc.nl
+    affiliation: Leiden University Medical Center
+    orcid: 'https://orcid.org/0000-0002-3739-8863'
+version: 0.1
+repository: 'https://github.com/hoogenboom-group/Mechanical-Analysis'
+abstract: >-
+  Drift and vibration analysis of scanning electron microscope images
+keywords:
+  - drift
+  - vibrations
+  - software
+  - "scanning electron microscope"
+license: GPL-2.0
+date-released: '2022-06-01'
