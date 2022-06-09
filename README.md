@@ -1,7 +1,7 @@
 # Mechanical-Analysis
+Drift and vibration analysis of scanning electron microscope images
 
-Created by Daan Boltje
-
+Created by Daan Boltje  
 Made presentable with input from Ryan Lane  
 
 ### Installation
